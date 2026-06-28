@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabiBills // Smart Money Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stripe: {
+                            slate: '#0a2540',
+                            text: '#425466',
+                            textDark: '#1a1f36',
+                            accent: '#635bff',
+                            accentHover: '#0a2540',
+                            border: '#e3e8ee',
+                            bgLight: '#f7fafc',
+                            success: '#00d4b6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .transition-stripe { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .stripe-gradient-bg {
+            background: radial-gradient(circle at 70% 10%, rgba(99, 91, 255, 0.15) 0%, transparent 45%),
+                        radial-gradient(circle at 10% 80%, rgba(0, 212, 182, 0.12) 0%, transparent 40%),
+                        #ffffff;
+        }
+
+        .row-fade-in {
+            animation: rowFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes rowFade {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="stripe-gradient-bg text-stripe-text font-sans min-h-screen flex flex-col antialiased selection:bg-stripe-accent selection:text-white">
+
+    <div id="intro-overlay" class="fixed inset-0 z-50 bg-white flex flex-col justify-center items-center px-6 transition-stripe duration-1000">
+        <div class="absolute inset-0 pointer-events-none opacity-40">
+            <div class="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#635bff] filter blur-[120px]"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#00d4b6] filter blur-[100px]"></div>
+        </div>
+
+        <div class="relative z-10 text-center max-w-md mx-auto space-y-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-stripe-accent/10 text-stripe-accent text-xs font-semibold rounded-full tracking-wide">
+                Introducing HabiBills 2.0
+            </div>
+            <div class="space-y-3">
+                <h1 class="text-5xl font-extrabold tracking-tight text-stripe-slate">HabiBills</h1>
+                <p class="text-lg text-stripe-text font-medium leading-relaxed">Your trusty companion for effortless money management.</p>
+            </div>
+            <div class="pt-4">
+                <button onclick="transitionToLogin()" class="transition-stripe px-6 py-3 bg-stripe-accent hover:bg-stripe-slate text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer">
+                    Access Terminal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-interface" class="hidden fixed inset-0 z-40 bg-stripe-bgLight flex flex-col justify-center items-center px-6 transition-stripe opacity-0 duration-700">
+        <div class="w-full max-w-md bg-white border border-stripe-border p-8 rounded-2xl shadow-xl shadow-stripe-slate/5 space-y-6 relative">
+            <div class="space-y-2">
+                <h2 class="text-2xl font-bold text-stripe-slate tracking-tight">Let’s get started.</h2>
+                <p class="text-sm text-stripe-text">Beautiful financial clarity is just a click away.</p>
+            </div>
+            
+            <form onsubmit="executeTerminalLogin(event);" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Identity Token (Email)</label>
+                    <input id="login-email" type="email" value="thragg@empire.net" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:ring-2 focus:ring-stripe-accent/20 focus:border-stripe-accent transition-stripe">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Security Access Key</label>
+                    <input type="password" value="••••••••" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:ring-2 focus:ring-stripe-accent/20 focus:border-stripe-accent transition-stripe">
+                </div>
+                <button type="submit" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold text-sm py-3 rounded-lg shadow-sm transform hover:-translate-y-0.5 cursor-pointer mt-2">
+                    Enter Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-interface" class="hidden opacity-0 flex-col min-h-screen transition-stripe duration-700">
+        <header class="border-b border-stripe-border bg-white px-8 py-5 flex justify-between items-center sticky top-0 z-30">
+            <div class="flex items-center gap-6">
+                <span class="text-xl font-bold text-stripe-slate tracking-tight flex items-center gap-2">
+                    <span class="w-4 h-4 bg-stripe-accent rounded-md transform rotate-12"></span>
+                    HabiBills
+                </span>
+                <nav class="hidden md:flex gap-1 text-sm font-semibold">
+                    <button onclick="switchPage('dashboard')" class="nav-btn px-4 py-2 text-stripe-accent bg-stripe-accent/10 rounded-lg transition-stripe">Dashboard</button>
+                    <button onclick="switchPage('income')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Income</button>
+                    <button onclick="switchPage('expenses')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Expenses</button>
+                    <button onclick="switchPage('goals')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Goal Tracker</button>
+                    <button onclick="switchPage('reports')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Reports</button>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4 text-sm font-medium">
+                <span class="text-stripe-text hidden sm:inline">Hello, <strong id="header-user-name" class="text-stripe-slate">User</strong></span>
+                <button onclick="triggerLogoutSession()" class="transition-stripe border border-stripe-border hover:border-stripe-slate text-stripe-slate font-semibold px-4 py-2 rounded-lg text-xs uppercase tracking-wider bg-white">Sign Out</button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-8 max-w-7xl w-full mx-auto">
+
+            <section id="page-dashboard" class="page-view space-y-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Net Balance</div>
+                        <div id="db-balance" class="text-3xl font-bold text-stripe-slate tracking-tight">$0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Total Income</div>
+                        <div id="db-income" class="text-3xl font-bold text-stripe-success tracking-tight">+$0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Total Expenses</div>
+                        <div id="db-expenses" class="text-3xl font-bold text-stripe-slate tracking-tight">-$0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Goal Metric</div>
+                        <div id="db-goal-pct" class="text-3xl font-bold text-stripe-accent tracking-tight">0.0%</div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-stripe-border rounded-xl shadow-sm shadow-stripe-slate/5 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-stripe-border flex justify-between items-center">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Recent Transactions Log</h2>
+                        <span class="inline-flex h-2 w-2 rounded-full bg-stripe-success"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-stripe-bgLight text-stripe-text font-semibold border-b border-stripe-border uppercase text-[11px] tracking-wider">
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">Type</th>
+                                    <th class="px-6 py-3">Description</th>
+                                    <th class="px-6 py-3 text-right">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-table-body" class="divide-y divide-stripe-border text-stripe-textDark"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-income" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Add Income Record</h2>
+                        <form id="income-form" onsubmit="executeIncomeSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Amount ($)</label>
+                                <input id="inc-amount" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Source Origin</label>
+                                <input id="inc-source" type="text" placeholder="e.g., Salary, Dividend" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Date</label>
+                                <input id="inc-date" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Description</label>
+                                <textarea id="inc-desc" rows="2" placeholder="Provide extra logs..." required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
+                            </div>
+                            <button type="submit" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Log Inflow</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Historical Income Data</h2>
+                        <div id="income-list-container" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-expenses" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Log Operational Expense</h2>
+                        <form id="expense-form" onsubmit="executeExpenseSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Amount ($)</label>
+                                <input id="exp-amount" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Category</label>
+                                <select id="exp-category" class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                                    <option>Housing / Citadel</option>
+                                    <option>Rations & Sustenance</option>
+                                    <option>Logistics / Travel</option>
+                                    <option>Apparel</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Date</label>
+                                <input id="exp-date" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Description</label>
+                                <textarea id="exp-desc" rows="2" placeholder="Context parameters..." required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
+                            </div>
+                            <button type="submit" class="transition-stripe w-full bg-stripe-slate hover:bg-stripe-accent text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Commit Outflow</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Historical Outflow Data</h2>
+                        <div id="expense-list-container" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-goals" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Deploy Target Objective</h2>
+                        <form id="goal-form" onsubmit="executeGoalSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Objective Name</label>
+                                <input id="goal-name" type="text" placeholder="e.g., Run Capital Build" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Target Amount ($)</label>
+                                <input id="goal-target" type="number" step="0.01" placeholder="5000.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Current Saved ($)</label>
+                                <input id="goal-current" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Target Deadline</label>
+                                <input id="goal-deadline" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <button type="submit" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Launch Tracker</button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Active Objective Monitors</h2>
+                        <div id="goals-list-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-reports" class="page-view hidden space-y-6">
+                <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                    <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-6">Unified Balance Summary</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+                        <div class="border border-stripe-border p-6 rounded-xl bg-stripe-bgLight space-y-4">
+                            <div class="text-xs font-bold uppercase tracking-wider text-stripe-slate">Net Capital Retention Ratio</div>
+                            <div class="flex items-center justify-between font-semibold text-stripe-textDark">
+                                <span>Income Saved Baseline</span>
+                                <span id="report-retained-pct" class="text-stripe-success">0.0%</span>
+                            </div>
+                            <div class="w-full bg-white h-3 border border-stripe-border rounded-full relative overflow-hidden">
+                                <div id="report-retained-bar" class="bg-stripe-success h-full w-[0%] rounded-full transition-stripe duration-1000"></div>
+                            </div>
+                        </div>
+                        <div class="border border-stripe-border p-6 rounded-xl bg-stripe-bgLight space-y-3">
+                            <div class="text-xs font-bold uppercase tracking-wider text-stripe-slate">Distribution Metrics by Category</div>
+                            <div id="report-category-distribution" class="space-y-2 text-stripe-textDark"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // CLEAN SLATE STATE ARCHITECTURE
+        let state = {
+            users: { user_id: 1, full_name: "Thragg", email: "thragg@empire.net" },
+            income: [],
+            expenses: [],
+            goals: []
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            if(document.getElementById('inc-date')) document.getElementById('inc-date').value = todayStr;
+            if(document.getElementById('exp-date')) document.getElementById('exp-date').value = todayStr;
+            if(document.getElementById('goal-deadline')) document.getElementById('goal-deadline').value = todayStr;
+            
+            // Set dynamic user header string safely
+            if(state.users) {
+                document.getElementById('header-user-name').innerText = state.users.full_name;
+            }
+            renderApplicationData();
+        });
+
+        function getMilestoneQuote(percentage) {
+            if (percentage >= 100) return "Target secured. Capital fully realized and ready for assignment.";
+            if (percentage >= 75)  return "So close! You're in the final stretch—keep this momentum going.";
+            if (percentage >= 50)  return "Halfway there. Your financial foundation is scaling perfectly.";
+            if (percentage >= 25)  return "First milestone unlocked. You're actively pacing toward this goal.";
+            return "Plan initialized. Every small allocation compounds over time.";
+        }
+
+        function transitionToLogin() {
+            const intro = document.getElementById('intro-overlay');
+            const login = document.getElementById('login-interface');
+            intro.classList.add('opacity-0', 'pointer-events-none');
+            login.classList.remove('hidden');
+            setTimeout(() => { login.classList.add('opacity-100'); }, 50);
+        }
+
+        function executeTerminalLogin(event) {
+            event.preventDefault();
+            const login = document.getElementById('login-interface');
+            const app = document.getElementById('app-interface');
+            login.classList.remove('opacity-100');
+            login.classList.add('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                login.classList.add('hidden');
+                app.classList.remove('hidden');
+                app.classList.add('flex');
+                setTimeout(() => { app.classList.add('opacity-100'); }, 50);
+                switchPage('dashboard');
+            }, 400);
+        }
+
+        function triggerLogoutSession() {
+            const app = document.getElementById('app-interface');
+            const login = document.getElementById('login-interface');
+            app.classList.remove('opacity-100');
+            setTimeout(() => {
+                app.classList.remove('flex');
+                app.classList.add('hidden');
+                login.classList.remove('hidden', 'pointer-events-none');
+                setTimeout(() => { login.classList.add('opacity-100'); }, 50);
+            }, 400);
+        }
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-view').forEach(view => view.classList.add('hidden'));
+            const target = document.getElementById(`page-${pageId}`);
+            if(target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe";
+            });
+
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => btn.getAttribute('onclick').includes(pageId));
+            if (activeBtn) {
+                activeBtn.className = "nav-btn px-4 py-2 text-stripe-accent bg-stripe-accent/10 rounded-lg transition-stripe font-bold";
+            }
+            renderApplicationData();
+        }
+
+        function renderApplicationData() {
+            const totalIncome = state.income.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const totalExpense = state.expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const netBalance = totalIncome - totalExpense;
+
+            const totalTargetGoals = state.goals.reduce((sum, g) => sum + parseFloat(g.target_amount), 0);
+            const totalCurrentGoals = state.goals.reduce((sum, g) => sum + parseFloat(g.current_amount), 0);
+            const goalPercentage = totalTargetGoals > 0 ? (totalCurrentGoals / totalTargetGoals) * 100 : 0;
+
+            if(document.getElementById('db-balance')) document.getElementById('db-balance').innerText = `$${netBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-income')) document.getElementById('db-income').innerText = `+$${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-expenses')) document.getElementById('db-expenses').innerText = `-$${totalExpense.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-goal-pct')) document.getElementById('db-goal-pct').innerText = `${goalPercentage.toFixed(1)}%`;
+
+            const dbTableBody = document.getElementById('dashboard-table-body');
+            if (dbTableBody) {
+                if(state.income.length === 0 && state.expenses.length === 0) {
+                    dbTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-xs text-stripe-text">No ledger transactional records live. Add assets via operational panels.</td></tr>`;
+                } else {
+                    const combined = [
+                        ...state.income.map(i => ({...i, displayCat: 'Inflow Inbound', valStr: `+$${parseFloat(i.amount).toFixed(2)}`, style: 'text-stripe-success font-semibold' })),
+                        ...state.expenses.map(e => ({...e, displayCat: e.category, valStr: `-$${parseFloat(e.amount).toFixed(2)}`, style: 'text-stripe-slate' }))
+                    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                    dbTableBody.innerHTML = combined.map((item, idx) => `
+                        <tr class="row-fade-in hover:bg-stripe-bgLight/40 transition-stripe" style="animation-delay: ${idx * 40}ms">
+                            <td class="px-6 py-4 text-xs text-stripe-text font-medium">${item.date}</td>
+                            <td class="px-6 py-4 text-xs font-bold tracking-wide uppercase text-stripe-slate">${item.displayCat}</td>
+                            <td class="px-6 py-4 text-sm text-stripe-text">${item.description}</td>
+                            <td class="px-6 py-4 text-right text-sm ${item.style}">${item.valStr}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            const incomeContainer = document.getElementById('income-list-container');
+            if (incomeContainer) {
+                incomeContainer.innerHTML = state.income.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No active historical income rows documented.</div>' : state.income.map(inc => `
+                    <div class="border border-stripe-border p-4 rounded-xl flex justify-between items-center bg-stripe-bgLight/30 hover:bg-white hover:shadow-sm transition-stripe">
+                        <div>
+                            <div class="font-bold text-stripe-slate text-sm">${inc.source}</div>
+                            <div class="text-xs text-stripe-text mt-0.5">${inc.date} — ${inc.description}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-stripe-success font-bold">+$${parseFloat(inc.amount).toFixed(2)}</span>
+                            <button onclick="deleteIncomeRecord(${inc.income_id})" class="text-xs text-red-500 font-semibold hover:underline">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const expenseContainer = document.getElementById('expense-list-container');
+            if (expenseContainer) {
+                expenseContainer.innerHTML = state.expenses.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No active historical expenses rows documented.</div>' : state.expenses.map(exp => `
+                    <div class="border border-stripe-border p-4 rounded-xl flex justify-between items-center bg-stripe-bgLight/30 hover:bg-white hover:shadow-sm transition-stripe">
+                        <div>
+                            <div class="font-bold text-stripe-slate text-sm">${exp.category}</div>
+                            <div class="text-xs text-stripe-text mt-0.5">${exp.date} — ${exp.description}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-stripe-slate font-bold">-$${parseFloat(exp.amount).toFixed(2)}</span>
+                            <button onclick="deleteExpenseRecord(${exp.expense_id})" class="text-xs text-red-500 font-semibold hover:underline">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const goalsContainer = document.getElementById('goals-list-container');
+            if (goalsContainer) {
+                goalsContainer.innerHTML = state.goals.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No structural tracker targets designated.</div>' : state.goals.map(g => {
+                    const pct = Math.min((parseFloat(g.current_amount) / parseFloat(g.target_amount)) * 100, 100);
+                    const milestoneMsg = getMilestoneQuote(pct);
+
+                    return `
+                        <div class="border border-stripe-border p-5 rounded-xl bg-white space-y-4 hover:shadow-md transition-stripe">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-base text-stripe-slate">${g.goal_name}</h3>
+                                    <p class="text-xs text-stripe-text mt-0.5">Target Cap: $${parseFloat(g.target_amount).toFixed(2)} // Target Timeline: ${g.deadline}</p>
+                                </div>
+                                <span class="text-stripe-accent font-bold text-sm bg-stripe-accent/10 px-2.5 py-1 rounded-full">$${parseFloat(g.current_amount).toFixed(2)} (${pct.toFixed(0)}%)</span>
+                            </div>
+                            <div class="w-full bg-stripe-bgLight h-2.5 rounded-full border border-stripe-border overflow-hidden">
+                                <div class="bg-stripe-accent h-full rounded-full transition-stripe duration-1000" style="width: ${pct}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs pt-1">
+                                <span class="text-stripe-accent font-medium tracking-wide flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-stripe-accent rounded-full animate-pulse"></span>
+                                    ${milestoneMsg}
+                                </span>
+                                <button onclick="deleteGoalRecord(${g.goal_id})" class="text-red-500 font-semibold hover:underline">Remove Tracker</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const retainedPct = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
+            if(document.getElementById('report-retained-pct')) document.getElementById('report-retained-pct').innerText = `${retainedPct.toFixed(1)}%`;
+            if(document.getElementById('report-retained-bar')) document.getElementById('report-retained-bar').style.width = `${Math.max(0, Math.min(retainedPct, 100))}%`;
+
+            const categoriesMap = {};
+            state.expenses.forEach(e => { categoriesMap[e.category] = (categoriesMap[e.category] || 0) + parseFloat(e.amount); });
+            const reportsDist = document.getElementById('report-category-distribution');
+            if(reportsDist) {
+                const keys = Object.keys(categoriesMap);
+                reportsDist.innerHTML = keys.length === 0 ? '<div class="text-xs text-stripe-text">No itemized categorical metrics parsed.</div>' : keys.map(k => `
+                    <div class="flex justify-between border-b border-stripe-border/60 pb-2">
+                        <span class="font-medium text-stripe-text">${k}</span>
+                        <span class="font-bold text-stripe-slate">$${categoriesMap[k].toFixed(2)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function executeIncomeSubmit(event) {
+            event.preventDefault();
+            state.income.push({
+                income_id: Date.now(),
+                user_id: state.users.user_id,
+                amount: parseFloat(document.getElementById('inc-amount').value),
+                source: document.getElementById('inc-source').value,
+                date: document.getElementById('inc-date').value,
+                description: document.getElementById('inc-desc').value
+            });
+            renderApplicationData();
+            document.getElementById('income-form').reset();
+            document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function deleteIncomeRecord(id) {
+            state.income = state.income.filter(item => item.income_id !== id);
+            renderApplicationData();
+        }
+
+        function executeExpenseSubmit(event) {
+            event.preventDefault();
+            state.expenses.push({
+                expense_id: Date.now(),
+                user_id: state.users.user_id,
+                amount: parseFloat(document.getElementById('exp-amount').value),
+                category: document.getElementById('exp-category').value,
+                date: document.getElementById('exp-date').value,
+                description: document.getElementById('exp-desc').value
+            });
+            renderApplicationData();
+            document.getElementById('expense-form').reset();
+            document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function deleteExpenseRecord(id) {
+            state.expenses = state.expenses.filter(item => item.expense_id !== id);
+            renderApplicationData();
+        }
+
+        function executeGoalSubmit(event) {
+            event.preventDefault();
+            state.goals.push({
+                goal_id: Date.now(),
+                user_id: state.users.user_id,
+                goal_name: document.getElementById('goal-name').value,
+                target_amount: parseFloat(document.getElementById('goal-target').value),
+                current_amount: parseFloat(document.getElementById('goal-current').value),
+                deadline: document.getElementById('goal-deadline').value,
+                status: "In Progress"
+            });
+            renderApplicationData();
+            document.getElementById('goal-form').reset();
+            document.getElementById('goal-deadline').value = new Date().toISOString().split('T')[0];
+        }
+
+        function deleteGoalRecord(id) {
+            state.goals = state.goals.filter(item => item.goal_id !== id);
+            renderApplicationData();
+        }
+    </script>
+</body>
+</html>
