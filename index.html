@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabiBills // Smart Money Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stripe: {
+                            slate: '#0a2540',
+                            text: '#425466',
+                            textDark: '#1a1f36',
+                            accent: '#635bff',
+                            accentHover: '#0a2540',
+                            border: '#e3e8ee',
+                            bgLight: '#f7fafc',
+                            success: '#00d4b6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .transition-stripe { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .stripe-gradient-bg {
+            background: radial-gradient(circle at 70% 10%, rgba(99, 91, 255, 0.15) 0%, transparent 45%),
+                        radial-gradient(circle at 10% 80%, rgba(0, 212, 182, 0.12) 0%, transparent 40%),
+                        #ffffff;
+        }
+
+        .row-fade-in {
+            animation: rowFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes rowFade {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="stripe-gradient-bg text-stripe-text font-sans min-h-screen flex flex-col antialiased selection:bg-stripe-accent selection:text-white">
+
+    <div id="intro-overlay" class="fixed inset-0 z-50 bg-white flex flex-col justify-center items-center px-6 transition-stripe duration-1000">
+        <div class="absolute inset-0 pointer-events-none opacity-40">
+            <div class="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#635bff] filter blur-[120px]"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#00d4b6] filter blur-[100px]"></div>
+        </div>
+
+        <div class="relative z-10 text-center max-w-md mx-auto space-y-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-stripe-accent/10 text-stripe-accent text-xs font-semibold rounded-full tracking-wide">
+                Introducing HabiBills 2.0
+            </div>
+            <div class="space-y-3">
+                <h1 class="text-5xl font-extrabold tracking-tight text-stripe-slate">HabiBills</h1>
+                <p class="text-lg text-stripe-text font-medium leading-relaxed">Your trusty companion for effortless money management.</p>
+            </div>
+            <div class="pt-4">
+                <button onclick="transitionToLogin()" class="transition-stripe px-6 py-3 bg-stripe-accent hover:bg-stripe-slate text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transform hover:-translate-y-0.5 cursor-pointer">
+                    Get Started
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-interface" class="hidden fixed inset-0 z-40 bg-stripe-bgLight flex flex-col justify-center items-center px-6 transition-stripe opacity-0 duration-700">
+        <div class="w-full max-w-md bg-white border border-stripe-border p-8 rounded-2xl shadow-xl shadow-stripe-slate/5 space-y-6 relative">
+            <div class="space-y-2">
+                <h2 class="text-2xl font-bold text-stripe-slate tracking-tight">Let’s get started.</h2>
+                <p class="text-sm text-stripe-text">Beautiful financial clarity is just a click away.</p>
+            </div>
+            
+            <div id="login-error" class="hidden p-3 rounded-lg border border-red-200 bg-red-50 text-red-500 text-xs font-semibold text-center"></div>
+
+            <form onsubmit="executeTerminalLogin(event);" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Email</label>
+                    <input id="login-email" type="email" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:ring-2 focus:ring-stripe-accent/20 focus:border-stripe-accent transition-stripe">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Password</label>
+                    <input id="login-password" type="password" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:ring-2 focus:ring-stripe-accent/20 focus:border-stripe-accent transition-stripe">
+                </div>
+                <button type="submit" id="login-submit-btn" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold text-sm py-3 rounded-lg shadow-sm transform hover:-translate-y-0.5 cursor-pointer mt-2">
+                    Log In
+                </button>
+            </form>
+
+            <div class="text-center text-xs text-stripe-text pt-2">
+                New here? <a href="registration.php" class="text-stripe-accent font-semibold hover:underline">Create an account →</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-interface" class="hidden opacity-0 flex-col min-h-screen transition-stripe duration-700">
+        <header class="border-b border-stripe-border bg-white px-8 py-5 flex justify-between items-center sticky top-0 z-30">
+            <div class="flex items-center gap-6">
+                <span class="text-xl font-bold text-stripe-slate tracking-tight flex items-center gap-2">
+                    <span class="w-4 h-4 bg-stripe-accent rounded-md transform rotate-12"></span>
+                    HabiBills
+                </span>
+                <nav class="hidden md:flex gap-1 text-sm font-semibold">
+                    <button onclick="switchPage('dashboard')" class="nav-btn px-4 py-2 text-stripe-accent bg-stripe-accent/10 rounded-lg transition-stripe">Dashboard</button>
+                    <button onclick="switchPage('income')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Income</button>
+                    <button onclick="switchPage('expenses')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Expenses</button>
+                    <button onclick="switchPage('goals')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Goal Tracker</button>
+                    <button onclick="switchPage('reports')" class="nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe">Reports</button>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4 text-sm font-medium">
+                <span class="text-stripe-text hidden sm:inline">Hello, <strong id="header-user-name" class="text-stripe-slate">User</strong></span>
+                <button onclick="triggerLogoutSession()" class="transition-stripe border border-stripe-border hover:border-stripe-slate text-stripe-slate font-semibold px-4 py-2 rounded-lg text-xs uppercase tracking-wider bg-white">Sign Out</button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-8 max-w-7xl w-full mx-auto">
+
+            <section id="page-dashboard" class="page-view space-y-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Net Balance</div>
+                        <div id="db-balance" class="text-3xl font-bold text-stripe-slate tracking-tight">₱0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Total Income</div>
+                        <div id="db-income" class="text-3xl font-bold text-stripe-success tracking-tight">+₱0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Total Expenses</div>
+                        <div id="db-expenses" class="text-3xl font-bold text-stripe-slate tracking-tight">-₱0.00</div>
+                    </div>
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Goal Progress</div>
+                        <div id="db-goal-pct" class="text-3xl font-bold text-stripe-accent tracking-tight">0.0%</div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-stripe-border rounded-xl shadow-sm shadow-stripe-slate/5 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-stripe-border flex justify-between items-center">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Recent Transactions</h2>
+                        <span class="inline-flex h-2 w-2 rounded-full bg-stripe-success"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-stripe-bgLight text-stripe-text font-semibold border-b border-stripe-border uppercase text-[11px] tracking-wider">
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">Type</th>
+                                    <th class="px-6 py-3">Description</th>
+                                    <th class="px-6 py-3 text-right">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-table-body" class="divide-y divide-stripe-border text-stripe-textDark"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-income" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Add Income Record</h2>
+                        <form id="income-form" onsubmit="executeIncomeSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Amount (₱)</label>
+                                <input id="inc-amount" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Source</label>
+                                <input id="inc-source" type="text" placeholder="e.g., Salary, Dividend" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Date</label>
+                                <input id="inc-date" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Description</label>
+                                <textarea id="inc-desc" rows="2" placeholder="Add a note..." required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" id="income-submit-btn" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Add Income</button>
+                                <button type="button" id="income-cancel-btn" onclick="cancelIncomeEdit()" class="hidden transition-stripe px-4 bg-white border border-stripe-border hover:border-stripe-slate text-stripe-slate font-semibold py-2.5 rounded-lg cursor-pointer">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Income History</h2>
+                        <div id="income-list-container" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-expenses" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Add Expense</h2>
+                        <form id="expense-form" onsubmit="executeExpenseSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Amount (₱)</label>
+                                <input id="exp-amount" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Category</label>
+                                <input id="exp-category" type="text" placeholder="e.g., Groceries, Rent, Transport" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Date</label>
+                                <input id="exp-date" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Description</label>
+                                <textarea id="exp-desc" rows="2" placeholder="Add a note..." required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" id="expense-submit-btn" class="transition-stripe w-full bg-stripe-slate hover:bg-stripe-accent text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Add Expense</button>
+                                <button type="button" id="expense-cancel-btn" onclick="cancelExpenseEdit()" class="hidden transition-stripe px-4 bg-white border border-stripe-border hover:border-stripe-slate text-stripe-slate font-semibold py-2.5 rounded-lg cursor-pointer">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Expense History</h2>
+                        <div id="expense-list-container" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-goals" class="page-view hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 h-fit space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight">Add a Goal</h2>
+                        <form id="goal-form" onsubmit="executeGoalSubmit(event);" class="space-y-4 text-sm">
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Goal Name</label>
+                                <input id="goal-name" type="text" placeholder="e.g., Emergency Fund" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Target Amount (₱)</label>
+                                <input id="goal-target" type="number" step="0.01" placeholder="5000.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Amount Saved (₱)</label>
+                                <input id="goal-current" type="number" step="0.01" placeholder="0.00" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-xs font-semibold text-stripe-slate">Deadline</label>
+                                <input id="goal-deadline" type="date" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" id="goal-submit-btn" class="transition-stripe w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Add Goal</button>
+                                <button type="button" id="goal-cancel-btn" onclick="cancelGoalEdit()" class="hidden transition-stripe px-4 bg-white border border-stripe-border hover:border-stripe-slate text-stripe-slate font-semibold py-2.5 rounded-lg cursor-pointer">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5 space-y-4">
+                        <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-4">Your Goals</h2>
+                        <div id="goals-list-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-reports" class="page-view hidden space-y-6">
+                <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
+                    <h2 class="text-base font-bold text-stripe-slate tracking-tight mb-6">Summary</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+                        <div class="border border-stripe-border p-6 rounded-xl bg-stripe-bgLight space-y-4">
+                            <div class="text-xs font-bold uppercase tracking-wider text-stripe-slate">Savings Rate</div>
+                            <div class="flex items-center justify-between font-semibold text-stripe-textDark">
+                                <span>Income Saved</span>
+                                <span id="report-retained-pct" class="text-stripe-success">0.0%</span>
+                            </div>
+                            <div class="w-full bg-white h-3 border border-stripe-border rounded-full relative overflow-hidden">
+                                <div id="report-retained-bar" class="bg-stripe-success h-full w-[0%] rounded-full transition-stripe duration-1000"></div>
+                            </div>
+                        </div>
+                        <div class="border border-stripe-border p-6 rounded-xl bg-stripe-bgLight space-y-3">
+                            <div class="text-xs font-bold uppercase tracking-wider text-stripe-slate">Spending by Category</div>
+                            <div id="report-category-distribution" class="space-y-2 text-stripe-textDark"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // LIVE STATE — populated from the PHP/MySQL backend, not hardcoded
+        let state = {
+            users: null,
+            income: [],
+            expenses: [],
+            goals: []
+        };
+
+        // Track which record (if any) is currently being edited in each form
+        let editingIncomeId = null;
+        let editingExpenseId = null;
+        let editingGoalId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            if(document.getElementById('inc-date')) document.getElementById('inc-date').value = todayStr;
+            if(document.getElementById('exp-date')) document.getElementById('exp-date').value = todayStr;
+            if(document.getElementById('goal-deadline')) document.getElementById('goal-deadline').value = todayStr;
+
+            checkExistingSession();
+        });
+
+        // If a PHP session cookie is already active, skip straight to the dashboard
+        async function checkExistingSession() {
+            try {
+                const res = await fetch('session_check.php');
+                const data = await res.json();
+                if (data.authenticated) {
+                    state.users = data.user;
+                    document.getElementById('intro-overlay').classList.add('hidden');
+                    document.getElementById('login-interface').classList.add('hidden');
+                    await enterApp();
+                }
+            } catch (err) {
+                console.error('Session check failed:', err);
+            }
+        }
+
+        function getMilestoneQuote(percentage) {
+            if (percentage >= 100) return "Goal reached! Nice work.";
+            if (percentage >= 75)  return "So close! You're in the final stretch.";
+            if (percentage >= 50)  return "Halfway there. Keep it up.";
+            if (percentage >= 25)  return "Good start — you're making progress.";
+            return "Just getting started. Every bit adds up.";
+        }
+
+        function transitionToLogin() {
+            const intro = document.getElementById('intro-overlay');
+            const login = document.getElementById('login-interface');
+            intro.classList.add('opacity-0', 'pointer-events-none');
+            login.classList.remove('hidden');
+            setTimeout(() => { login.classList.add('opacity-100'); }, 50);
+        }
+
+        async function executeTerminalLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorBox = document.getElementById('login-error');
+            const submitBtn = document.getElementById('login-submit-btn');
+
+            errorBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Authenticating...";
+
+            try {
+                const res = await fetch('login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    state.users = data.user;
+                    const login = document.getElementById('login-interface');
+                    login.classList.remove('opacity-100');
+                    login.classList.add('opacity-0', 'pointer-events-none');
+
+                    setTimeout(async () => {
+                        login.classList.add('hidden');
+                        await enterApp();
+                    }, 400);
+                } else {
+                    errorBox.innerText = data.message || "Invalid email or password.";
+                    errorBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorBox.innerText = "Could not reach the server. Please try again.";
+                errorBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Enter Dashboard";
+            }
+        }
+
+        async function enterApp() {
+            const app = document.getElementById('app-interface');
+            app.classList.remove('hidden');
+            app.classList.add('flex');
+            setTimeout(() => { app.classList.add('opacity-100'); }, 50);
+
+            if (state.users) {
+                document.getElementById('header-user-name').innerText = state.users.full_name;
+            }
+
+            await loadAllData();
+            switchPage('dashboard');
+        }
+
+        // Pull the logged-in user's income, expenses, and goals from the database
+        async function loadAllData() {
+            try {
+                const [incomeRes, expenseRes, goalsRes] = await Promise.all([
+                    fetch('income.php'),
+                    fetch('expenses.php'),
+                    fetch('goals.php')
+                ]);
+                state.income = await incomeRes.json();
+                state.expenses = await expenseRes.json();
+                state.goals = await goalsRes.json();
+                renderApplicationData();
+            } catch (err) {
+                console.error('Failed to load account data:', err);
+            }
+        }
+
+        async function triggerLogoutSession() {
+            const app = document.getElementById('app-interface');
+            const login = document.getElementById('login-interface');
+
+            try {
+                await fetch('logout.php');
+            } catch (err) {
+                console.error('Logout request failed:', err);
+            }
+
+            state.users = null;
+            state.income = [];
+            state.expenses = [];
+            state.goals = [];
+            editingIncomeId = null;
+            editingExpenseId = null;
+            editingGoalId = null;
+
+            app.classList.remove('opacity-100');
+            setTimeout(() => {
+                app.classList.remove('flex');
+                app.classList.add('hidden');
+                document.getElementById('login-email').value = '';
+                document.getElementById('login-password').value = '';
+                login.classList.remove('hidden', 'pointer-events-none');
+                setTimeout(() => { login.classList.add('opacity-100'); }, 50);
+            }, 400);
+        }
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-view').forEach(view => view.classList.add('hidden'));
+            const target = document.getElementById(`page-${pageId}`);
+            if(target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-4 py-2 text-stripe-text hover:text-stripe-slate rounded-lg transition-stripe";
+            });
+
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => btn.getAttribute('onclick').includes(pageId));
+            if (activeBtn) {
+                activeBtn.className = "nav-btn px-4 py-2 text-stripe-accent bg-stripe-accent/10 rounded-lg transition-stripe font-bold";
+            }
+            renderApplicationData();
+        }
+
+        function renderApplicationData() {
+            const totalIncome = state.income.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const totalExpense = state.expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+            const netBalance = totalIncome - totalExpense;
+
+            const totalTargetGoals = state.goals.reduce((sum, g) => sum + parseFloat(g.target_amount), 0);
+            const totalCurrentGoals = state.goals.reduce((sum, g) => sum + parseFloat(g.current_amount), 0);
+            const goalPercentage = totalTargetGoals > 0 ? (totalCurrentGoals / totalTargetGoals) * 100 : 0;
+
+            if(document.getElementById('db-balance')) document.getElementById('db-balance').innerText = `₱${netBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-income')) document.getElementById('db-income').innerText = `+₱${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-expenses')) document.getElementById('db-expenses').innerText = `-₱${totalExpense.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if(document.getElementById('db-goal-pct')) document.getElementById('db-goal-pct').innerText = `${goalPercentage.toFixed(1)}%`;
+
+            const dbTableBody = document.getElementById('dashboard-table-body');
+            if (dbTableBody) {
+                if(state.income.length === 0 && state.expenses.length === 0) {
+                    dbTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-xs text-stripe-text">No transactions yet. Add income or expenses to get started.</td></tr>`;
+                } else {
+                    const combined = [
+                        ...state.income.map(i => ({...i, displayCat: 'Income', valStr: `+₱${parseFloat(i.amount).toFixed(2)}`, style: 'text-stripe-success font-semibold' })),
+                        ...state.expenses.map(e => ({...e, displayCat: e.category, valStr: `-₱${parseFloat(e.amount).toFixed(2)}`, style: 'text-stripe-slate' }))
+                    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                    dbTableBody.innerHTML = combined.map((item, idx) => `
+                        <tr class="row-fade-in hover:bg-stripe-bgLight/40 transition-stripe" style="animation-delay: ${idx * 40}ms">
+                            <td class="px-6 py-4 text-xs text-stripe-text font-medium">${item.date}</td>
+                            <td class="px-6 py-4 text-xs font-bold tracking-wide uppercase text-stripe-slate">${item.displayCat}</td>
+                            <td class="px-6 py-4 text-sm text-stripe-text">${item.description}</td>
+                            <td class="px-6 py-4 text-right text-sm ${item.style}">${item.valStr}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            const incomeContainer = document.getElementById('income-list-container');
+            if (incomeContainer) {
+                incomeContainer.innerHTML = state.income.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No income added yet.</div>' : state.income.map(inc => `
+                    <div class="border border-stripe-border p-4 rounded-xl flex justify-between items-center bg-stripe-bgLight/30 hover:bg-white hover:shadow-sm transition-stripe">
+                        <div>
+                            <div class="font-bold text-stripe-slate text-sm">${inc.source}</div>
+                            <div class="text-xs text-stripe-text mt-0.5">${inc.date} — ${inc.description}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-stripe-success font-bold">+₱${parseFloat(inc.amount).toFixed(2)}</span>
+                            <button onclick="editIncomeRecord(${inc.income_id})" class="text-xs text-stripe-accent font-semibold hover:underline">Edit</button>
+                            <button onclick="deleteIncomeRecord(${inc.income_id})" class="text-xs text-red-500 font-semibold hover:underline">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const expenseContainer = document.getElementById('expense-list-container');
+            if (expenseContainer) {
+                expenseContainer.innerHTML = state.expenses.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No expenses added yet.</div>' : state.expenses.map(exp => `
+                    <div class="border border-stripe-border p-4 rounded-xl flex justify-between items-center bg-stripe-bgLight/30 hover:bg-white hover:shadow-sm transition-stripe">
+                        <div>
+                            <div class="font-bold text-stripe-slate text-sm">${exp.category}</div>
+                            <div class="text-xs text-stripe-text mt-0.5">${exp.date} — ${exp.description}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-stripe-slate font-bold">-₱${parseFloat(exp.amount).toFixed(2)}</span>
+                            <button onclick="editExpenseRecord(${exp.expense_id})" class="text-xs text-stripe-accent font-semibold hover:underline">Edit</button>
+                            <button onclick="deleteExpenseRecord(${exp.expense_id})" class="text-xs text-red-500 font-semibold hover:underline">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const goalsContainer = document.getElementById('goals-list-container');
+            if (goalsContainer) {
+                goalsContainer.innerHTML = state.goals.length === 0 ? '<div class="text-xs p-4 text-stripe-text border border-dashed border-stripe-border rounded-xl text-center">No goals added yet.</div>' : state.goals.map(g => {
+                    const pct = Math.min((parseFloat(g.current_amount) / parseFloat(g.target_amount)) * 100, 100);
+                    const milestoneMsg = getMilestoneQuote(pct);
+
+                    return `
+                        <div class="border border-stripe-border p-5 rounded-xl bg-white space-y-4 hover:shadow-md transition-stripe">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-base text-stripe-slate">${g.goal_name}</h3>
+                                    <p class="text-xs text-stripe-text mt-0.5">Target: ₱${parseFloat(g.target_amount).toFixed(2)} // Deadline: ${g.deadline}</p>
+                                </div>
+                                <span class="text-stripe-accent font-bold text-sm bg-stripe-accent/10 px-2.5 py-1 rounded-full">₱${parseFloat(g.current_amount).toFixed(2)} (${pct.toFixed(0)}%)</span>
+                            </div>
+                            <div class="w-full bg-stripe-bgLight h-2.5 rounded-full border border-stripe-border overflow-hidden">
+                                <div class="bg-stripe-accent h-full rounded-full transition-stripe duration-1000" style="width: ${pct}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs pt-1">
+                                <span class="text-stripe-accent font-medium tracking-wide flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-stripe-accent rounded-full animate-pulse"></span>
+                                    ${milestoneMsg}
+                                </span>
+                                <span class="flex items-center gap-3">
+                                    <button onclick="editGoalRecord(${g.goal_id})" class="text-stripe-accent font-semibold hover:underline">Edit</button>
+                                    <button onclick="deleteGoalRecord(${g.goal_id})" class="text-red-500 font-semibold hover:underline">Remove</button>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const retainedPct = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
+            if(document.getElementById('report-retained-pct')) document.getElementById('report-retained-pct').innerText = `${retainedPct.toFixed(1)}%`;
+            if(document.getElementById('report-retained-bar')) document.getElementById('report-retained-bar').style.width = `${Math.max(0, Math.min(retainedPct, 100))}%`;
+
+            const categoriesMap = {};
+            state.expenses.forEach(e => { categoriesMap[e.category] = (categoriesMap[e.category] || 0) + parseFloat(e.amount); });
+            const reportsDist = document.getElementById('report-category-distribution');
+            if(reportsDist) {
+                const keys = Object.keys(categoriesMap);
+                reportsDist.innerHTML = keys.length === 0 ? '<div class="text-xs text-stripe-text">No expenses to break down yet.</div>' : keys.map(k => `
+                    <div class="flex justify-between border-b border-stripe-border/60 pb-2">
+                        <span class="font-medium text-stripe-text">${k}</span>
+                        <span class="font-bold text-stripe-slate">₱${categoriesMap[k].toFixed(2)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function executeIncomeSubmit(event) {
+            event.preventDefault();
+            const payload = {
+                amount: parseFloat(document.getElementById('inc-amount').value),
+                source: document.getElementById('inc-source').value,
+                date: document.getElementById('inc-date').value,
+                description: document.getElementById('inc-desc').value
+            };
+
+            try {
+                if (editingIncomeId) {
+                    const res = await fetch(`income.php?id=${editingIncomeId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const updated = await res.json();
+                    const idx = state.income.findIndex(item => item.income_id === editingIncomeId);
+                    if (idx !== -1) state.income[idx] = updated;
+                    cancelIncomeEdit();
+                } else {
+                    const res = await fetch('income.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const newRecord = await res.json();
+                    state.income.push(newRecord);
+                }
+                renderApplicationData();
+                document.getElementById('income-form').reset();
+                document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+            } catch (err) {
+                console.error('Failed to save income:', err);
+            }
+        }
+
+        function editIncomeRecord(id) {
+            const record = state.income.find(item => item.income_id === id);
+            if (!record) return;
+
+            editingIncomeId = id;
+            document.getElementById('inc-amount').value = record.amount;
+            document.getElementById('inc-source').value = record.source;
+            document.getElementById('inc-date').value = record.date;
+            document.getElementById('inc-desc').value = record.description;
+
+            document.getElementById('income-submit-btn').innerText = 'Update Income';
+            document.getElementById('income-cancel-btn').classList.remove('hidden');
+            switchPage('income');
+        }
+
+        function cancelIncomeEdit() {
+            editingIncomeId = null;
+            document.getElementById('income-form').reset();
+            document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('income-submit-btn').innerText = 'Add Income';
+            document.getElementById('income-cancel-btn').classList.add('hidden');
+        }
+
+        async function deleteIncomeRecord(id) {
+            try {
+                await fetch(`income.php?id=${id}`, { method: 'DELETE' });
+                state.income = state.income.filter(item => item.income_id !== id);
+                if (editingIncomeId === id) cancelIncomeEdit();
+                renderApplicationData();
+            } catch (err) {
+                console.error('Failed to delete income:', err);
+            }
+        }
+
+        async function executeExpenseSubmit(event) {
+            event.preventDefault();
+            const payload = {
+                amount: parseFloat(document.getElementById('exp-amount').value),
+                category: document.getElementById('exp-category').value,
+                date: document.getElementById('exp-date').value,
+                description: document.getElementById('exp-desc').value
+            };
+
+            try {
+                if (editingExpenseId) {
+                    const res = await fetch(`expenses.php?id=${editingExpenseId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const updated = await res.json();
+                    const idx = state.expenses.findIndex(item => item.expense_id === editingExpenseId);
+                    if (idx !== -1) state.expenses[idx] = updated;
+                    cancelExpenseEdit();
+                } else {
+                    const res = await fetch('expenses.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const newRecord = await res.json();
+                    state.expenses.push(newRecord);
+                }
+                renderApplicationData();
+                document.getElementById('expense-form').reset();
+                document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+            } catch (err) {
+                console.error('Failed to save expense:', err);
+            }
+        }
+
+        function editExpenseRecord(id) {
+            const record = state.expenses.find(item => item.expense_id === id);
+            if (!record) return;
+
+            editingExpenseId = id;
+            document.getElementById('exp-amount').value = record.amount;
+            document.getElementById('exp-category').value = record.category;
+            document.getElementById('exp-date').value = record.date;
+            document.getElementById('exp-desc').value = record.description;
+
+            document.getElementById('expense-submit-btn').innerText = 'Update Expense';
+            document.getElementById('expense-cancel-btn').classList.remove('hidden');
+            switchPage('expenses');
+        }
+
+        function cancelExpenseEdit() {
+            editingExpenseId = null;
+            document.getElementById('expense-form').reset();
+            document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('expense-submit-btn').innerText = 'Add Expense';
+            document.getElementById('expense-cancel-btn').classList.add('hidden');
+        }
+
+        async function deleteExpenseRecord(id) {
+            try {
+                await fetch(`expenses.php?id=${id}`, { method: 'DELETE' });
+                state.expenses = state.expenses.filter(item => item.expense_id !== id);
+                if (editingExpenseId === id) cancelExpenseEdit();
+                renderApplicationData();
+            } catch (err) {
+                console.error('Failed to delete expense:', err);
+            }
+        }
+
+        async function executeGoalSubmit(event) {
+            event.preventDefault();
+            const payload = {
+                goal_name: document.getElementById('goal-name').value,
+                target_amount: parseFloat(document.getElementById('goal-target').value),
+                current_amount: parseFloat(document.getElementById('goal-current').value),
+                deadline: document.getElementById('goal-deadline').value
+            };
+
+            try {
+                if (editingGoalId) {
+                    const res = await fetch(`goals.php?id=${editingGoalId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const updated = await res.json();
+                    const idx = state.goals.findIndex(item => item.goal_id === editingGoalId);
+                    if (idx !== -1) state.goals[idx] = updated;
+                    cancelGoalEdit();
+                } else {
+                    const res = await fetch('goals.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const newRecord = await res.json();
+                    state.goals.push(newRecord);
+                }
+                renderApplicationData();
+                document.getElementById('goal-form').reset();
+                document.getElementById('goal-deadline').value = new Date().toISOString().split('T')[0];
+            } catch (err) {
+                console.error('Failed to save goal:', err);
+            }
+        }
+
+        function editGoalRecord(id) {
+            const record = state.goals.find(item => item.goal_id === id);
+            if (!record) return;
+
+            editingGoalId = id;
+            document.getElementById('goal-name').value = record.goal_name;
+            document.getElementById('goal-target').value = record.target_amount;
+            document.getElementById('goal-current').value = record.current_amount;
+            document.getElementById('goal-deadline').value = record.deadline;
+
+            document.getElementById('goal-submit-btn').innerText = 'Update Goal';
+            document.getElementById('goal-cancel-btn').classList.remove('hidden');
+            switchPage('goals');
+        }
+
+        function cancelGoalEdit() {
+            editingGoalId = null;
+            document.getElementById('goal-form').reset();
+            document.getElementById('goal-deadline').value = new Date().toISOString().split('T')[0];
+            document.getElementById('goal-submit-btn').innerText = 'Add Goal';
+            document.getElementById('goal-cancel-btn').classList.add('hidden');
+        }
+
+        async function deleteGoalRecord(id) {
+            try {
+                await fetch(`goals.php?id=${id}`, { method: 'DELETE' });
+                state.goals = state.goals.filter(item => item.goal_id !== id);
+                if (editingGoalId === id) cancelGoalEdit();
+                renderApplicationData();
+            } catch (err) {
+                console.error('Failed to delete goal:', err);
+            }
+        }
+    </script>
+</body>
+</html>

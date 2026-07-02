@@ -1,6 +1,5 @@
 <?php
-// Include your secure database connection profile
-// require_once 'connection.php';
+require_once 'connection.php';
 
 $message = "";
 $messageClass = "";
@@ -13,22 +12,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($fullName) && !empty($email) && !empty($password)) {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-        try {
-            // Prepared statement query architecture to prevent SQL Injections
-            // $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
-            // $stmt->execute([$fullName, $email, $hashedPassword]);
-            
+        // Prepared statement query architecture to prevent SQL Injections
+        $stmt = $conn->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $fullName, $email, $hashedPassword);
+
+        if ($stmt->execute()) {
             // EXACT REQUESTED LINK MECHANIC
             $message = "Register complete. <a href='index.html' class='underline font-bold hover:text-stripe-slate ml-1'>[Back to Login?]</a>";
             $messageClass = "text-stripe-success bg-stripe-success/10 border-stripe-success/20 text-center text-sm py-3";
-        } catch (PDOException $e) {
-            if ($e->errorInfo[1] == 1062) {
-                $message = "This email node token is already linked to an existing operator account.";
+        } else {
+            if ($conn->errno == 1062) {
+                $message = "This email node token is already linked to an existing account.";
             } else {
-                $message = "Database synchronization fault: " . $e->getMessage();
+                $message = "Database synchronization fault: " . $conn->error;
             }
             $messageClass = "text-red-500 bg-red-50 border-red-200";
         }
+        $stmt->close();
     } else {
         $message = "All validation parameters must be populated.";
         $messageClass = "text-red-500 bg-red-50 border-red-200";
@@ -95,19 +95,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST" class="space-y-4">
             <div class="space-y-1">
                 <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Full Name</label>
-                <input type="text" name="full_name" placeholder="Thragg" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
+                <input type="text" name="full_name" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
             </div>
             <div class="space-y-1">
-                <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Email Node Token</label>
-                <input type="email" name="email" placeholder="thragg@empire.net" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
+                <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Email</label>
+                <input type="email" name="email" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
             </div>
             <div class="space-y-1">
-                <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Security Access Key</label>
-                <input type="password" name="password" placeholder="••••••••" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
+                <label class="block text-xs font-semibold text-stripe-slate uppercase tracking-wider">Password</label>
+                <input type="password" name="password" required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-4 py-3 text-stripe-textDark text-sm focus:outline-none focus:border-stripe-accent">
             </div>
             
             <button type="submit" class="w-full bg-stripe-accent hover:bg-stripe-slate text-white font-semibold text-sm py-3 rounded-lg shadow-sm transition duration-300 transform hover:-translate-y-0.5 mt-2 cursor-pointer">
-                Deploy Account
+                Create Account
             </button>
         </form>
 
