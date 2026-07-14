@@ -134,7 +134,7 @@
                     </div>
                     <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
                         <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Total Expenses</div>
-                        <div id="db-expenses" class="text-3xl font-bold text-stripe-slate tracking-tight">-₱0.00</div>
+                        <div id="db-expenses" class="text-3xl font-bold text-red-500 tracking-tight">-₱0.00</div>
                     </div>
                     <div class="bg-white border border-stripe-border rounded-xl p-6 shadow-sm shadow-stripe-slate/5">
                         <div class="text-xs font-bold uppercase tracking-wider text-stripe-text mb-1">Goal Progress</div>
@@ -216,7 +216,7 @@
                             </div>
                             <div class="space-y-1">
                                 <label class="block text-xs font-semibold text-stripe-slate">Description</label>
-                                <textarea id="exp-desc" rows="2" placeholder="Add a note..." required class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
+                                <textarea id="exp-desc" rows="2" placeholder="Add a note..." class="w-full bg-stripe-bgLight border border-stripe-border rounded-lg px-3 py-2.5 text-stripe-textDark focus:outline-none focus:border-stripe-accent"></textarea>
                             </div>
                             <div class="flex gap-2">
                                 <button type="submit" id="expense-submit-btn" class="transition-stripe w-full bg-stripe-slate hover:bg-stripe-accent text-white font-semibold py-2.5 rounded-lg shadow-sm cursor-pointer">Add Expense</button>
@@ -484,7 +484,7 @@
                 } else {
                     const combined = [
                         ...state.income.map(i => ({...i, displayCat: 'Income', valStr: `+₱${parseFloat(i.amount).toFixed(2)}`, style: 'text-stripe-success font-semibold' })),
-                        ...state.expenses.map(e => ({...e, displayCat: e.category, valStr: `-₱${parseFloat(e.amount).toFixed(2)}`, style: 'text-stripe-slate' }))
+                        ...state.expenses.map(e => ({...e, displayCat: e.category, valStr: `-₱${parseFloat(e.amount).toFixed(2)}`, style: 'text-red-500 font-semibold' }))
                     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
                     dbTableBody.innerHTML = combined.map((item, idx) => `
@@ -524,7 +524,7 @@
                             <div class="text-xs text-stripe-text mt-0.5">${exp.date} — ${exp.description}</div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <span class="text-stripe-slate font-bold">-₱${parseFloat(exp.amount).toFixed(2)}</span>
+                            <span class="text-red-500 font-bold">-₱${parseFloat(exp.amount).toFixed(2)}</span>
                             <button onclick="editExpenseRecord(${exp.expense_id})" class="text-xs text-stripe-accent font-semibold hover:underline">Edit</button>
                             <button onclick="deleteExpenseRecord(${exp.expense_id})" class="text-xs text-red-500 font-semibold hover:underline">Delete</button>
                         </div>
